@@ -141,21 +141,208 @@ public class Car  {
 ```
 
 
++ 서비스 호출 흐름(Sync)<p>
+* `예약(Reservation)` -> `결제(Payment)`간 호출은 동기식으로 일관성을 유지하는 트랜젝션으로 처리
+* Customer는 차량을 확인하고 예약 및 결제 수행
+* 결제서비스를 호출하기위해 FeinClient를 이용하여 인터페이스(Proxy)를 구현 
+* 예약이 가능하면(`@PostPersist`) 결제를 요청하도록 처리한다.
+	
+	
+	
+```
+// Reservation/src/main/java/socar/external/PaymentService.java
+
+@FeignClient(name="payment", url="http://user06-payment:8080")
+public interface PaymentService {
+    @RequestMapping(method= RequestMethod.POST, path="/payments")
+    public void approvePayment(@RequestBody Payment payment);
+
+}
+
+
+// Reservation/src/main/java/socar/external/CarService.java
+@FeignClient(name="car", url="http://user06-car:8080")
+public interface CarService {
+    @RequestMapping(method= RequestMethod.GET, path="/cars")
+    public void chkAndReqReserve(@RequestBody Car car);
+
+}
+```	
+	
+	
+	
+	
+	
 	
 ## CQRS
 
-숙소(Room) 의 사용가능 여부, 리뷰 및 예약/결재 등 총 Status 에 대하여 고객(Customer)이 조회 할 수 있도록 CQRS 로 구현하였다.
-- room, review, reservation, payment 개별 Aggregate Status 를 통합 조회하여 성능 Issue 를 사전에 예방할 수 있다.
-- 비동기식으로 처리되어 발행된 이벤트 기반 Kafka 를 통해 수신/처리 되어 별도 Table 에 관리한다
-- Table 모델링 (ROOMVIEW)
+차량의 사용가능 여부 확인, 차량 예약 및 결제 등 각각의 Status 에 대하여 고객(Customer)이 조회 할 수 있도록 CQRS 로 구현하였습니다.
+- car, reservation, payment 개별 Aggregate Status 를 통합 조회하여 성능 Issue 를 사전에 예방할 수 있습니다.
+- 비동기식으로 처리되어 발행된 이벤트 기반 Kafka 를 통해 수신/처리 되어 별도 Table 에 관리합니다
+- Table 모델링 (carView)
 
-  ![image](https://user-images.githubusercontent.com/77129832/119319352-4b198c00-bcb5-11eb-93bc-ff0657feeb9f.png)
-- viewpage MSA ViewHandler 를 통해 구현 ("RoomRegistered" 이벤트 발생 시, Pub/Sub 기반으로 별도 Roomview 테이블에 저장)
-  ![image](https://user-images.githubusercontent.com/77129832/119321162-4d7ce580-bcb7-11eb-9030-29ee6272c40d.png)
-  ![image](https://user-images.githubusercontent.com/31723044/119350185-fccab400-bcd9-11eb-8269-61868de41cc7.png)
-- 실제로 view 페이지를 조회해 보면 모든 room에 대한 전반적인 예약 상태, 결제 상태, 리뷰 건수 등의 정보를 종합적으로 알 수 있다
-  ![image](https://user-images.githubusercontent.com/31723044/119357063-1b34ad80-bce2-11eb-94fb-a587261ab56f.png)
+- viewpage MSA ViewHandler 를 통해 구현 ("CarRegistered" 이벤트 발생 시, Pub/Sub 기반으로 별도 Carview 테이블에 저장)
+- 실제로 view 페이지를 조회해 보면 차량정보, 예약 및 결제 등을 확인 할 수 있습니다. 
 
+	
+```	
+	@Service
+	public class CarviewViewHandler {
+
+
+	    @Autowired
+	    private CarviewRepository carviewRepository;
+
++	    // 차량이 등록되었을 때 insert -> viewpage table 
+	    @StreamListener(KafkaProcessor.INPUT)
++	    public void whenCarRegistered_then_CREATE_1 (@Payload CarRegistered carRegistered) {
+		try {
+
+		    if (!carRegistered.validate()) return;
+
+		    // view 객체 생성
+		    Carview carview = new Carview();
+		    // view 객체에 이벤트의 Value 를 set 함
+		    carview.setCarId(carRegistered.getcarId());
+		    carview.setCarStatus(carRegistered.getstatus());
+		    carview.setCarName(carRegistered.getcarName());
+		    carview.setCarType(carRegistered.getcarType());
+		    // view 레파지 토리에 save
+		    carviewRepository.save(carview);
+
+		}catch (Exception e){
+		    e.printStackTrace();
+		}
+	    }
+
+
++	    // 차량이 수정되었을 때 update -> viewpage table 
+	    @StreamListener(KafkaProcessor.INPUT)
++	    public void whenCarModified_then_UPDATE_1(@Payload CarModified carModified) {
+		try {
+		    if (!carModified.validate()) return;
+			// view 객체 조회
+		    Optional<Carview> carviewOptional = carviewRepository.findById(carModified.getcarId());
+
+		    if( carviewOptional.isPresent()) {
+			 Carview carview = carviewOptional.get();
+		    // view 객체에 이벤트의 eventDirectValue 를 set 함
+			 carview.setCarStatus(carModified.getstatus());
+			 carview.setCarName(carModified.getcarName());
+			 carview.setCarType(carModified.getcarType());
+			// view 레파지 토리에 save
+			 carviewRepository.save(carview);
+			}
+
+
+		}catch (Exception e){
+		    e.printStackTrace();
+		}
+	    }
+
++	    // 예약이 확정되었을 때 update -> viewpage table 
+	    @StreamListener(KafkaProcessor.INPUT)
++	    public void whenReservationConfirmed_then_UPDATE_2(@Payload ReservationConfirmed reservationConfirmed) {
+		try {
+		    if (!reservationConfirmed.validate()) return;
+			// view 객체 조회
+		    Optional<Carview> carviewOptional = carviewRepository.findById(reservationConfirmed.getcarId());
+
+		    if( carviewOptional.isPresent()) {
+			 Carview carview = carviewOptional.get();
+		    // view 객체에 이벤트의 eventDirectValue 를 set 함
+			 carview.setRsvId(reservationConfirmed.getrsvId());
+			 carview.setRsvStatus(reservationConfirmed.getstatus());
+			// view 레파지 토리에 save
+			 carviewRepository.save(carview);
+			}
+
+
+		}catch (Exception e){
+		    e.printStackTrace();
+		}
+	    }
+
++	    // 결제가 완료 되었을 때 update -> viewpage table 
+	    @StreamListener(KafkaProcessor.INPUT)
++	    public void whenPaymentApproved_then_UPDATE_3(@Payload PaymentApproved paymentApproved) {
+		try {
+		    if (!paymentApproved.validate()) return;
+			// view 객체 조회
+
+			    List<Carview> carviewList = carviewRepository.findByRsvId(paymentApproved.getrsvId());
+			    for(Carview carview : carviewList){
+			    // view 객체에 이벤트의 eventDirectValue 를 set 함
+			    carview.setPayId(paymentApproved.getpayId());
+			    carview.setPayStatus(paymentApproved.getstatus());
+			// view 레파지 토리에 save
+			carviewRepository.save(carview);
+			}
+
+		}catch (Exception e){
+		    e.printStackTrace();
+		}
+	    }
+
++	    // 예약이 취소 되었을 때 update -> viewpage table
+	    @StreamListener(KafkaProcessor.INPUT)
++	    public void whenReservationCancelled_then_UPDATE_4(@Payload ReservationCancelled reservationCancelled) {
+		try {
+		    if (!reservationCancelled.validate()) return;
+			// view 객체 조회
+
+			    List<Carview> carviewList = carviewRepository.findByRsvId(reservationCancelled.getrsvId());
+			    for(Carview carview : carviewList){
+			    // view 객체에 이벤트의 eventDirectValue 를 set 함
+			    carview.setRsvStatus(reservationCancelled.getstatus());
+			// view 레파지 토리에 save
+			carviewRepository.save(carview);
+			}
+
+		}catch (Exception e){
+		    e.printStackTrace();
+		}
+	    }
+
++	    // 결제가 취소 되었을 때 update -> viewpage table
+	    @StreamListener(KafkaProcessor.INPUT)
++	    public void whenPaymentCancelled_then_UPDATE_5(@Payload PaymentCancelled paymentCancelled) {
+		try {
+		    if (!paymentCancelled.validate()) return;
+			// view 객체 조회
+
+			    List<Carview> carviewList = carviewRepository.findByPayId(paymentCancelled.getpayId());
+			    for(Carview carview : carviewList){
+			    // view 객체에 이벤트의 eventDirectValue 를 set 함
+			    carview.setPayStatus(paymentCancelled.getstatus());
+			// view 레파지 토리에 save
+			carviewRepository.save(carview);
+			}
+
+		}catch (Exception e){
+		    e.printStackTrace();
+		}
+	    }
+
++	    // 차량정보를 삭제 하였을 때  delete -> viewpage table
+	    @StreamListener(KafkaProcessor.INPUT)
++	    public void whenCarDeleted_then_DELETE_1(@Payload CarDeleted carDeleted) {
+		try {
+		    if (!carDeleted.validate()) return;
+		    // view 레파지 토리에 삭제 쿼리
+		    carviewRepository.deleteById(carDeleted.getcarId());
+		}catch (Exception e){
+		    e.printStackTrace();
+		}
+	    }
+	}
+
+```	
+
+	
+	
+	
+	
 
 ## API 게이트웨이
       1. gateway 스프링부트 App을 추가 후 application.yaml내에 각 마이크로 서비스의 routes 를 추가하고 gateway 서버의 포트를 8080 으로 설정함
