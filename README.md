@@ -193,7 +193,7 @@ public interface CarService {
 	    @Autowired
 	    private CarviewRepository carviewRepository;
 
-+	    // 차량이 등록되었을 때 insert -> viewpage table 
++   	    // 차량이 등록되었을 때 insert -> viewpage table 
 	    @StreamListener(KafkaProcessor.INPUT)
 +	    public void whenCarRegistered_then_CREATE_1 (@Payload CarRegistered carRegistered) {
 		try {
