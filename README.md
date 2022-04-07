@@ -1,4 +1,4 @@
-![logo_overview-1](https://user-images.githubusercontent.com/12591322/162212001-20e1d650-80f3-47b9-bc23-8d3647a41afd.png)
+![image](https://user-images.githubusercontent.com/12591322/162278748-e2e84bb4-b2e0-4e48-abc2-5225bbbd61e7.png)
 
 # 쏘카 커버하기 
 
