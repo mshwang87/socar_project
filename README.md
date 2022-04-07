@@ -569,9 +569,11 @@ http GET http://localhost:8088/reservations
 
 ## 동기식 호출(Sync) 과 Fallback 처리
 
-분석 단계에서의 조건 중 하나로 예약 시 숙소(room) 간의 예약 가능 상태 확인 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다. 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다. 또한 예약(reservation) -> 결제(payment) 서비스도 동기식으로 처리하기로 하였다.
+분석 단계에서의 조건 중 하나로 예약 시 차량(Car) 간의 예약 가능 상태 확인 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하도록 했습니다.
+그리고, 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 하였습니다.
+또한 예약(reservation) -> 결제(payment) 서비스도 동기식으로 처리하기로 하였습니다 
 
-- 룸, 결제 서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현 
+- 차량, 결제 서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현 
 
 ```
 # CarService.java
@@ -652,9 +654,9 @@ public interface PaymentService {
 ## 비동기식 호출 / 시간적 디커플링 / 장애격리 / 최종 (Eventual) 일관성 테스트
 
 
-결제가 이루어진 후에 숙소 시스템의 상태가 업데이트 되고, 예약 시스템의 상태가 업데이트 되며, 예약 및 취소 메시지가 전송되는 시스템과의 통신 행위는 비동기식으로 처리한다.
+결제가 이루어진 후에 차량의 상태가 업데이트 되고, 예약 시스템의 상태가 업데이트 되며, 예약 및 취소 메시지가 전송되는 시스템과의 통신 행위는 비동기식으로 처리합니다
  
-- 이를 위하여 결제가 승인되면 결제가 승인 되었다는 이벤트를 카프카로 송출한다. (Publish)
+- 이를 위하여 결제가 승인되면 결제가 승인 되었다는 이벤트를 카프카로 송출합니다. (Publish)
  
 ```
 # Payment/src/.../Payment.java
@@ -688,7 +690,7 @@ public class Payment  {
 }
 ```
 
-- 예약 시스템에서는 결제 승인 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다:
+- 예약 시스템에서는 결제 승인 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현합니다
 
 ```
 # Reservation.java
@@ -723,7 +725,7 @@ package socar;
 
 ```
 
-그 외 메시지 서비스는 예약/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 메시지 서비스가 유지보수로 인해 잠시 내려간 상태 라도 예약을 받는데 문제가 없습니다
+그 외 메시지 서비스는 예약/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 메시지 서비스가 유지보수로 인해 잠시 내려간 상태 라도 예약을 받는데 문제가 없도록 개발하였습니다
 
 	
 
@@ -734,7 +736,8 @@ package socar;
 
 각 구현체들은 각자의 source repository 에 구성되었고, 사용한 CI/CD는 buildspec.yml을 이용한 AWS codebuild를 사용하였습니다.
 
-- CodeBuild 프로젝트를 생성하고 AWS_ACCOUNT_ID, KUBE_URL, KUBE_TOKEN 환경 변수 세팅을 한다
+- CodeBuild 프로젝트를 생성하고 AWS_ACCOUNT_ID, KUBE_URL, KUBE_TOKEN 환경 변수 세팅을 합니다
+	
 + Service Account 생성
 ```
 cat <<EOF | kubectl apply -f -
@@ -770,10 +773,112 @@ kubectl -n kube-system describe secret eks-admin
 
 	
 ```
-buildspec.yml 파일 
-마이크로 서비스 room의 yml 파일 이용하도록 세팅
+buildspec-kubectl.yml 파일 
+마이크로 서비스 car의 yml 파일 이용하도록 세팅
 ```
-![codebuild(buildspec)](https://user-images.githubusercontent.com/38099203/119283849-30292680-bc79-11eb-9f86-cbb715e74846.PNG)
+
+```
+version: 0.2
+
+env:
+  variables:
+    _PROJECT_NAME: "user06-car"
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto8
+      docker: 18
+    commands:
+      - echo install kubectl
+      - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+      - chmod +x ./kubectl
+      - mv ./kubectl /usr/local/bin/kubectl
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - echo $_PROJECT_NAME
+      - echo $AWS_ACCOUNT_ID
+      - echo $AWS_DEFAULT_REGION
+      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+      - echo start command
+      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - mvn package -Dmaven.test.skip=true
+      - docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION  .
+  post_build:
+    commands:
+      - echo Pushing the Docker image...
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION
+      - echo connect kubectl
+      - kubectl config set-cluster k8s --server="$KUBE_URL" --insecure-skip-tls-verify=true
+      - kubectl config set-credentials admin --token="$KUBE_TOKEN"
+      - kubectl config set-context default --cluster=k8s --user=admin
+      - kubectl config use-context default
+      - |
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: $_PROJECT_NAME
+            labels:
+              app: $_PROJECT_NAME
+          spec:
+            ports:
+              - port: 8080
+                targetPort: 8080
+            selector:
+              app: $_PROJECT_NAME
+          EOF
+      - |
+          cat  <<EOF | kubectl apply -f -
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: $_PROJECT_NAME
+            labels:
+              app: $_PROJECT_NAME
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: $_PROJECT_NAME
+            template:
+              metadata:
+                labels:
+                  app: $_PROJECT_NAME
+              spec:
+                containers:
+                  - name: $_PROJECT_NAME
+                    image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION
+                    ports:
+                      - containerPort: 8080
+                    readinessProbe:
+                      httpGet:
+                        path: /actuator/health
+                        port: 8080
+                      initialDelaySeconds: 10
+                      timeoutSeconds: 2
+                      periodSeconds: 5
+                      failureThreshold: 10
+                    livenessProbe:
+                      httpGet:
+                        path: /actuator/health
+                        port: 8080
+                      initialDelaySeconds: 120
+                      timeoutSeconds: 2
+                      periodSeconds: 5
+                      failureThreshold: 5
+          EOF
+
+cache:
+  paths:
+    - '/root/.m2/**/*'
+
+```
 
 - codebuild 실행
 ```
