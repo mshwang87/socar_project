@@ -61,19 +61,87 @@
 ## Event Storming 결과
 * MSAEz 로 모델링한 이벤트스토밍 결과:  https://labs.msaez.io/#/storming/wUpqnKyxMya9cRHPexnY8ITeWDs1/2a05aba524e2b1919fb1083aa310c989
 
-* 쏘카 서비스의 전체적인 구조 및 흐름을 파악하였으며, 각 Bounded Context 간의 pub/sub, req/res 관계를 확인하여 연결하였음
+* 쏘카 서비스의 전체적인 구조 및 흐름을 파악하였으며, 각 Bounded Context 간의 pub/sub, req/res 관계를 확인하여 연결하였습니다.
 ![1](https://user-images.githubusercontent.com/12591322/162213249-6a5cd9da-fef3-4c27-b5db-7934ff3fbada.png)
 
 
 
-# 구현:
+# SAGA
 
-분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트로 구현하였다. 구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 808n 이다)
+분석/설계 단계에서 도출된 결과에 따라 마이크로 서비스들을 스프링부트로 구현하였습니다. 
+구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같습니다
 
 ```
-   mvn spring-boot:run
+    cd car
+    mvn spring-boot:run
+```
+```
+    cd message
+    mvn spring-boot:run 
+```
+```
+    cd payment
+    mvn spring-boot:run  
+```
+```
+    cd reservation
+    mvn spring-boot:run  
+```
+```
+    cd viewpage
+    mvn spring-boot:run  
 ```
 
+
++ DDD적용<p>
+    5개의 도메인으로 관리되고 있으며 `차량관리(Car)`, `메시지관리(Message)`, `결제(Payment)`, `예약(Reservation)`, `뷰페이지(CQRS)(viewpage)`으로 구성됩니다.
+
+
+```diff
+@Entity
+@Table(name="Car_table")
+public class Car  {
+
+    @Id
+    @GeneratedValue(strategy=GenerationType.AUTO)
+    private Long carId;
+    private String status;
+    private String carName;
+    private Long amount;
+    private String carType;
+
+    @PostPersist
+    public void onPostPersist(){
+        // 차량 등록 
+        // 초기값 세팅 
+        status = "available";       // 최초 등록시 항상 이용가능
+
+        CarRegistered carRegistered = new CarRegistered();
+        BeanUtils.copyProperties(this, carRegistered);
+        carRegistered.publishAfterCommit();
+
+    }
+
+    @PostUpdate
+    public void onPostUpdate(){
+        // 차량 정보 수정 
+        CarModified carModified = new CarModified();
+        BeanUtils.copyProperties(this, carModified);
+        carModified.publishAfterCommit();
+
+        CarReserved carReserved = new CarReserved();
+        BeanUtils.copyProperties(this, carReserved);
+        carReserved.publishAfterCommit();
+
+        CarCancelled carCancelled = new CarCancelled();
+        BeanUtils.copyProperties(this, carCancelled);
+        carCancelled.publishAfterCommit();
+
+    }
+```
+
+
+	
 ## CQRS
 
 숙소(Room) 의 사용가능 여부, 리뷰 및 예약/결재 등 총 Status 에 대하여 고객(Customer)이 조회 할 수 있도록 CQRS 로 구현하였다.
