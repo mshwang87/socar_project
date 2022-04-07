@@ -180,6 +180,8 @@ public interface CarService {
 - car, reservation, payment 개별 Aggregate Status 를 통합 조회하여 성능 Issue 를 사전에 예방할 수 있습니다.
 - 비동기식으로 처리되어 발행된 이벤트 기반 Kafka 를 통해 수신/처리 되어 별도 Table 에 관리합니다
 - Table 모델링 (carView)
+![image](https://user-images.githubusercontent.com/12591322/162228220-c7ed2828-5476-4f6f-aeab-316491c5d048.png)
+
 
 - viewpage MSA ViewHandler 를 통해 구현 ("CarRegistered" 이벤트 발생 시, Pub/Sub 기반으로 별도 Carview 테이블에 저장)
 - 실제로 view 페이지를 조회해 보면 차량정보, 예약 및 결제 등을 확인 할 수 있습니다. 
@@ -345,48 +347,56 @@ public interface CarService {
 	
 
 ## API 게이트웨이
-      1. gateway 스프링부트 App을 추가 후 application.yaml내에 각 마이크로 서비스의 routes 를 추가하고 gateway 서버의 포트를 8080 으로 설정함
+      1. gateway 스프링부트 App을 추가 후 application.yaml내에 각 마이크로 서비스의 routes 를 추가하고 gateway 서버의 포트를 8080 으로 설
        
           - application.yaml 예시
             ```
             spring:
-              profiles: docker
-              cloud:
-                gateway:
-                  routes:
-                    - id: payment
-                      uri: http://payment:8080
-                      predicates:
-                        - Path=/payments/** 
-                    - id: room
-                      uri: http://room:8080
-                      predicates:
-                        - Path=/rooms/**, /reviews/**, /check/**
-                    - id: reservation
-                      uri: http://reservation:8080
-                      predicates:
-                        - Path=/reservations/**
-                    - id: message
-                      uri: http://message:8080
-                      predicates:
-                        - Path=/messages/** 
-                    - id: viewpage
-                      uri: http://viewpage:8080
-                      predicates:
-                        - Path= /roomviews/**
-                  globalcors:
-                    corsConfigurations:
-                      '[/**]':
-                        allowedOrigins:
-                          - "*"
-                        allowedMethods:
-                          - "*"
-                        allowedHeaders:
-                          - "*"
-                        allowCredentials: true
+		  profiles: docker
+		  sleuth:
+		    propagation-keys: x-request-id,x-ot-span-context
+		  zipkin:
+		    base-url: http://jaeger-collector.default.svc.cluster.local:9411
+		  cloud:
+		    gateway:
+		      routes:
+			- id: payment
+			  uri: http://user06-payment:8080
+			  predicates:
+			    - Path=/payments/** 
+			- id: car
+			  uri: http://user06-car:8080
+			  predicates:
+			    - Path=/cars/** 
+			- id: reservation
+			  uri: http://user06-reservation:8080
+			  predicates:
+			    - Path=/reservations/** 
+			- id: message
+			  uri: http://user06-message:8080
+			  predicates:
+			    - Path=/messages/** 
+			- id: viewpage
+			  uri: http://user06-viewpage:8080
+			  predicates:
+			    - Path= /roomviews/**
+			- id: frontend
+			  uri: http://user06-frontend:8080
+			  predicates:
+			    - Path=/**
+		      globalcors:
+			corsConfigurations:
+			  '[/**]':
+			    allowedOrigins:
+			      - "*"
+			    allowedMethods:
+			      - "*"
+			    allowedHeaders:
+			      - "*"
+			    allowCredentials: true
 
-            server:
-              port: 8080            
+		server:
+		  port: 8080      
             ```
 
          
@@ -395,28 +405,27 @@ public interface CarService {
           
 
             ```
-            apiVersion: apps/v1
-            kind: Deployment
-            metadata:
-              name: gateway
-              namespace: airbnb
-              labels:
-                app: gateway
-            spec:
-              replicas: 1
-              selector:
-                matchLabels:
-                  app: gateway
-              template:
-                metadata:
-                  labels:
-                    app: gateway
-                spec:
-                  containers:
-                    - name: gateway
-                      image: 247785678011.dkr.ecr.us-east-2.amazonaws.com/gateway:1.0
-                      ports:
-                        - containerPort: 8080
+		apiVersion: apps/v1
+		kind: Deployment
+		metadata:
+		  name: gateway
+		  labels:
+		    app: gateway
+		spec:
+		  replicas: 1
+		  selector:
+		    matchLabels:
+		      app: gateway
+		  template:
+		    metadata:
+		      labels:
+			app: gateway
+		    spec:
+		      containers:
+			- name: gateway
+			  image: 979050235289.dkr.ecr.ap-southeast-2.amazonaws.com/user06-gateway:1.0
+			  ports:
+			    - containerPort: 8080
             ```               
             
 
