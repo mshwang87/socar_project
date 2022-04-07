@@ -740,22 +740,41 @@ package socar;
 각 구현체들은 각자의 source repository 에 구성되었고, 사용한 CI/CD는 buildspec.yml을 이용한 AWS codebuild를 사용하였습니다.
 
 - CodeBuild 프로젝트를 생성하고 AWS_ACCOUNT_ID, KUBE_URL, KUBE_TOKEN 환경 변수 세팅을 한다
++ Service Account 생성
 ```
-SA 생성
-kubectl apply -f eks-admin-service-account.yml
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eks-admin
+  namespace: kube-system
+EOF
 ```
-![codebuild(sa)](https://user-images.githubusercontent.com/38099203/119293259-ff52ec80-bc8c-11eb-8671-b9a226811762.PNG)
++ ClusterRoleBinding 생성
 ```
-Role 생성
-kubectl apply -f eks-admin-cluster-role-binding.yml
+cat <<EOF | kubectl apply -f -
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: eks-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: eks-admin
+  namespace: kube-system
+EOF
 ```
-![codebuild(role)](https://user-images.githubusercontent.com/38099203/119293300-1abdf780-bc8d-11eb-9b07-ad173237efb1.PNG)
++ EKS 접속토큰 가져오기
 ```
-Token 확인
-kubectl -n kube-system get secret
-kubectl -n kube-system describe secret eks-admin-token-rjpmq
+kubectl -n kube-system describe secret eks-admin
 ```
-![codebuild(token)](https://user-images.githubusercontent.com/38099203/119293511-84d69c80-bc8d-11eb-99c7-e8929e6a41e4.PNG)
+	
+![image](https://user-images.githubusercontent.com/12591322/162275510-bcccd946-fd67-4f17-bb3c-cd59a0c1364e.png)
+
+	
 ```
 buildspec.yml 파일 
 마이크로 서비스 room의 yml 파일 이용하도록 세팅
@@ -769,14 +788,13 @@ codebuild 프로젝트 및 빌드 이력
 ![codebuild(프로젝트)](https://user-images.githubusercontent.com/38099203/119283851-315a5380-bc79-11eb-9b2a-b4522d22d009.PNG)
 ![codebuild(로그)](https://user-images.githubusercontent.com/38099203/119283850-30c1bd00-bc79-11eb-9547-1ff1f62e48a4.PNG)
 
-- codebuild 빌드 내역 (Message 서비스 세부)
+- codebuild 빌드 내역 (Car 서비스 세부)
 
-![image](https://user-images.githubusercontent.com/31723044/119385500-2b0fba00-bd01-11eb-861b-cc31910ff945.png)
-
+![image](https://user-images.githubusercontent.com/12591322/162275263-5db2d141-6098-4dd6-ae4a-6280b9fbd830.png)
+	
 - codebuild 빌드 내역 (전체 이력 조회)
 
-![image](https://user-images.githubusercontent.com/31723044/119385401-087da100-bd01-11eb-8b69-ce222e6bb71e.png)
-
+![image](https://user-images.githubusercontent.com/12591322/162275202-c377b96f-170a-43ca-a7d2-e6d2c2778712.png)
 
 
 
