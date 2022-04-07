@@ -772,8 +772,7 @@ EOF
 kubectl -n kube-system describe secret eks-admin
 ```
 	
-![image](https://user-images.githubusercontent.com/12591322/162275510-bcccd946-fd67-4f17-bb3c-cd59a0c1364e.png)
-
+![image](https://user-images.githubusercontent.com/12591322/162277091-565e39ab-fcb6-4abc-9789-f60580440f28.png)
 	
 ```
 buildspec.yml 파일 
