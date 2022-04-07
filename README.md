@@ -432,7 +432,7 @@ public interface CarService {
             ```     
           - Kubernetes에 생성된 Deploy. 확인
             
-![image](https://user-images.githubusercontent.com/80744273/119321943-1d821200-bcb8-11eb-98d7-bf8def9ebf80.png)
+![image](https://user-images.githubusercontent.com/12591322/162277091-565e39ab-fcb6-4abc-9789-f60580440f28.png)
 	    
             
       3. Kubernetes용 Service.yaml을 작성하고 Kubernetes에 Service/LoadBalancer을 생성하여 Gateway 엔드포인트를 확인함. 
@@ -469,10 +469,10 @@ public interface CarService {
             Service  및 엔드포인트 확인 
             kubectl get svc -n airbnb           
             ```                 
-![image](https://user-images.githubusercontent.com/80744273/119318358-2a046b80-bcb4-11eb-9d46-ef2d498c2cff.png)
+![image](https://user-images.githubusercontent.com/12591322/162277731-27dbe1a3-7202-4340-be94-bcaa75551aeb.png)
 
+	
 # Correlation
-
 
 ## DDD 의 적용
 
@@ -768,7 +768,6 @@ kubectl -n kube-system describe secret eks-admin
 ```
 ![image](https://user-images.githubusercontent.com/12591322/162277440-bc89bb64-c748-455e-b7bf-42169bf202fd.png)
 
-![image](https://user-images.githubusercontent.com/12591322/162277091-565e39ab-fcb6-4abc-9789-f60580440f28.png)
 	
 ```
 buildspec.yml 파일 
