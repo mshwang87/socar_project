@@ -423,7 +423,9 @@ public interface CarService {
 		    spec:
 		      containers:
 			- name: gateway
-			  image: 979050235289.dkr.ecr.ap-southeast-2.amazonaws.com/user06-gateway:1.0
+			  #image: 979050235289.dkr.ecr.ap-southeast-2.amazonaws.com/user06-gateway:1.0
+          		  image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION
+          
 			  ports:
 			    - containerPort: 8080
             ```               
@@ -476,62 +478,40 @@ public interface CarService {
 
 # Correlation
 
-Airbnb 프로젝트에서는 PolicyHandler에서 처리 시 어떤 건에 대한 처리인지를 구별하기 위한 Correlation-key 구현을 
-이벤트 클래스 안의 변수로 전달받아 서비스간 연관된 처리를 정확하게 구현하고 있습니다. 
-
-아래의 구현 예제를 보면
-
-예약(Reservation)을 하면 동시에 연관된 방(Room), 결제(Payment) 등의 서비스의 상태가 적당하게 변경이 되고,
-예약건의 취소를 수행하면 다시 연관된 방(Room), 결제(Payment) 등의 서비스의 상태값 등의 데이터가 적당한 상태로 변경되는 것을
-확인할 수 있습니다.
-
-예약등록
-![image](https://user-images.githubusercontent.com/31723044/119320227-54572880-bcb6-11eb-973b-a9a5cd1f7e21.png)
-예약 후 - 방 상태
-![image](https://user-images.githubusercontent.com/31723044/119320300-689b2580-bcb6-11eb-933e-98be5aadca61.png)
-예약 후 - 예약 상태
-![image](https://user-images.githubusercontent.com/31723044/119320390-810b4000-bcb6-11eb-8c62-48f6765c570a.png)
-예약 후 - 결제 상태
-![image](https://user-images.githubusercontent.com/31723044/119320524-a39d5900-bcb6-11eb-864b-173711eb9e94.png)
-예약 취소
-![image](https://user-images.githubusercontent.com/31723044/119320595-b6b02900-bcb6-11eb-8d8d-0d5c59603c72.png)
-취소 후 - 방 상태
-![image](https://user-images.githubusercontent.com/31723044/119320680-ccbde980-bcb6-11eb-8b7c-66315329aafe.png)
-취소 후 - 예약 상태
-![image](https://user-images.githubusercontent.com/31723044/119320747-dcd5c900-bcb6-11eb-9c44-fd3781c7c55f.png)
-취소 후 - 결제 상태
-![image](https://user-images.githubusercontent.com/31723044/119320806-ee1ed580-bcb6-11eb-8ccf-8c81385cc8ba.png)
-
 
 ## DDD 의 적용
 
-- 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다. (예시는 room 마이크로 서비스). 이때 가능한 현업에서 사용하는 언어 (유비쿼터스 랭귀지)를 그대로 사용하려고 노력했다. 현실에서 발생가는한 이벤트에 의하여 마이크로 서비스들이 상호 작용하기 좋은 모델링으로 구현을 하였다.
+- 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였습니다. (예시는 Car 마이크로 서비스). 
+  가급적(유비쿼터스 랭귀지)를 그대로 사용하려고 노력했습니다. 
 
 ```
-package airbnb;
+package socar;
 
 import javax.persistence.*;
 import org.springframework.beans.BeanUtils;
+import java.util.List;
+
 
 @Entity
-@Table(name="Room_table")
-public class Room {
+@Table(name="Car_table")
+public class Car  {
 
     @Id
-    @GeneratedValue(strategy=GenerationType.IDENTITY)
-    private Long roomId;       // 방ID
-    private String status;     // 방 상태
-    private String desc;       // 방 상세 설명
-    private Long reviewCnt;    // 리뷰 건수
-    private String lastAction; // 최종 작업
+    @GeneratedValue(strategy=GenerationType.AUTO)
+    private Long carId;
+    private String status;
+    private String carName;
+    private Long amount;
+    private String carType;
 
-    public Long getRoomId() {
-        return roomId;
+    public Long getCarId() {
+        return carId;
     }
 
-    public void setRoomId(Long roomId) {
-        this.roomId = roomId;
+    public void setCarId(Long carId) {
+        this.carId = carId;
     }
+    
     public String getStatus() {
         return status;
     }
@@ -539,49 +519,53 @@ public class Room {
     public void setStatus(String status) {
         this.status = status;
     }
-    public String getDesc() {
-        return desc;
+    
+    public String getCarName() {
+        return carName;
     }
 
-    public void setDesc(String desc) {
-        this.desc = desc;
+    public void setCarName(String carName) {
+        this.carName = carName;
     }
-    public Long getReviewCnt() {
-        return reviewCnt;
-    }
-
-    public void setReviewCnt(Long reviewCnt) {
-        this.reviewCnt = reviewCnt;
-    }
-    public String getLastAction() {
-        return lastAction;
+    
+    public Long getAmount() {
+        return amount;
     }
 
-    public void setLastAction(String lastAction) {
-        this.lastAction = lastAction;
+    public void setAmount(Long amount) {
+        this.amount = amount;
+    }
+    
+    public String getCarType() {
+        return carType;
+    }
+
+    public void setCarType(String carType) {
+        this.carType = carType;
     }
 }
 
+
 ```
-- Entity Pattern 과 Repository Pattern 을 적용하여 JPA 를 통하여 다양한 데이터소스 유형 (RDB or NoSQL) 에 대한 별도의 처리가 없도록 데이터 접근 어댑터를 자동 생성하기 위하여 Spring Data REST 의 RestRepository 를 적용하였다
+- Entity Pattern 과 Repository Pattern 을 적용하여 다양한 데이터소스에 대한 별도의 처리가 없도록 데이터 접근 어댑터를 자동 생성하기 위하여 Spring Data REST 의 RestRepository 를 적용하였습니다
 ```
-package airbnb;
+package socar;
 
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
-@RepositoryRestResource(collectionResourceRel="rooms", path="rooms")
-public interface RoomRepository extends PagingAndSortingRepository<Room, Long>{
-
+@RepositoryRestResource(collectionResourceRel="cars", path="cars")
+public interface CarRepository extends PagingAndSortingRepository<Car, Long>{
 }
+
 ```
 - 적용 후 REST API 의 테스트
 ```
-# room 서비스의 room 등록
-http POST http://localhost:8088/rooms desc="Beautiful House"  
+# car 서비스의 car 등록
+http POST http://localhost:8088/cars carName="Mercedes-Benz"  
 
 # reservation 서비스의 예약 요청
-http POST http://localhost:8088/reservations roomId=1 status=reqReserve
+http POST http://localhost:8088/reservations carId=1 status=reqReserve
 
 # reservation 서비스의 예약 상태 확인
 http GET http://localhost:8088/reservations
@@ -595,34 +579,45 @@ http GET http://localhost:8088/reservations
 - 룸, 결제 서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현 
 
 ```
+# CarService.java
+
+package socar.external;
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import java.util.Date;
+
+@FeignClient(name="car", url="http://user06-car:8080")
+public interface CarService {
+    @RequestMapping(method= RequestMethod.GET, path="/cars")
+    public void chkAndReqReserve(@RequestBody Car car);
+
+}
+
+
+
 # PaymentService.java
 
-package airbnb.external;
+package socar.external;
 
-<import문 생략>
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 
-@FeignClient(name="Payment", url="${prop.room.url}")
+import java.util.Date;
+
+@FeignClient(name="payment", url="http://user06-payment:8080")
 public interface PaymentService {
-
     @RequestMapping(method= RequestMethod.POST, path="/payments")
     public void approvePayment(@RequestBody Payment payment);
 
 }
-
-# RoomService.java
-
-package airbnb.external;
-
-<import문 생략>
-
-@FeignClient(name="Room", url="${prop.room.url}")
-public interface RoomService {
-
-    @RequestMapping(method= RequestMethod.GET, path="/check/chkAndReqReserve")
-    public boolean chkAndReqReserve(@RequestParam("roomId") long roomId);
-
-}
-
 
 ```
 
@@ -632,64 +627,31 @@ public interface RoomService {
 
     @PostPersist
     public void onPostPersist(){
-
-        ////////////////////////////////
-        // RESERVATION에 INSERT 된 경우 
-        ////////////////////////////////
-
-        ////////////////////////////////////
-        // 예약 요청(reqReserve) 들어온 경우
-        ////////////////////////////////////
-
-        // 해당 ROOM이 Available한 상태인지 체크
-        boolean result = ReservationApplication.applicationContext.getBean(airbnb.external.RoomService.class)
-                        .chkAndReqReserve(this.getRoomId());
-        System.out.println("######## Check Result : " + result);
+        // 예약 요청이 들어왔을 경우 사용가능한지 확인
+        socar.external.Car car = new socar.external.Car();
+        // mappings goes here
+        boolean result = ReservationApplication.applicationContext.getBean(socar.external.CarService.class)
+            .chkAndReqReserve(car);
+        System.out.println("사용가능 여부 : " + result);
 
         if(result) { 
 
             // 예약 가능한 상태인 경우(Available)
-
-            //////////////////////////////
-            // PAYMENT 결제 진행 (POST방식) - SYNC 호출
-            //////////////////////////////
-            airbnb.external.Payment payment = new airbnb.external.Payment();
+            // PAYMENT 결제모듈 호출 (POST방식) - SYNC 호출
+            socar.external.Payment payment = new socar.external.Payment();
             payment.setRsvId(this.getRsvId());
-            payment.setRoomId(this.getRoomId());
+            payment.setCarId(this.getCarId());
             payment.setStatus("paid");
-            ReservationApplication.applicationContext.getBean(airbnb.external.PaymentService.class)
+            ReservationApplication.applicationContext.getBean(socar.external.PaymentService.class)
                 .approvePayment(payment);
 
-            /////////////////////////////////////
-            // 이벤트 발행 --> ReservationCreated
-            /////////////////////////////////////
+            // 이벤트시작 --> ReservationCreated
             ReservationCreated reservationCreated = new ReservationCreated();
             BeanUtils.copyProperties(this, reservationCreated);
             reservationCreated.publishAfterCommit();
         }
     }
 ```
-
-- 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 결제 시스템이 장애가 나면 주문도 못받는다는 것을 확인:
-
-
-```
-# 결제 (pay) 서비스를 잠시 내려놓음 (ctrl+c)
-
-# 예약 요청
-http POST http://localhost:8088/reservations roomId=1 status=reqReserve   #Fail
-
-# 결제서비스 재기동
-cd payment
-mvn spring-boot:run
-
-# 예약 요청
-http POST http://localhost:8088/reservations roomId=1 status=reqReserve   #Success
-```
-
-- 또한 과도한 요청시에 서비스 장애가 도미노 처럼 벌어질 수 있다. (서킷브레이커, 폴백 처리는 운영단계에서 설명한다.)
-
-
 
 
 ## 비동기식 호출 / 시간적 디커플링 / 장애격리 / 최종 (Eventual) 일관성 테스트
@@ -700,31 +662,33 @@ http POST http://localhost:8088/reservations roomId=1 status=reqReserve   #Succe
 - 이를 위하여 결제가 승인되면 결제가 승인 되었다는 이벤트를 카프카로 송출한다. (Publish)
  
 ```
-# Payment.java
+# Payment/src/.../Payment.java
 
-package airbnb;
+package socar;
 
 import javax.persistence.*;
 import org.springframework.beans.BeanUtils;
 
 @Entity
 @Table(name="Payment_table")
-public class Payment {
+public class Payment  {
 
-    ....
+    @Id
+    @GeneratedValue(strategy=GenerationType.AUTO)
+    private Long payId;
+    private Long rsvId;
+    private Long carId;
+    private String status;
+
 
     @PostPersist
     public void onPostPersist(){
-        ////////////////////////////
-        // 결제 승인 된 경우
-        ////////////////////////////
-
-        // 이벤트 발행 -> PaymentApproved
+        // 결재 승인나면 paymentApproved 시작 
         PaymentApproved paymentApproved = new PaymentApproved();
         BeanUtils.copyProperties(this, paymentApproved);
         paymentApproved.publishAfterCommit();
+
     }
-    
     ....
 }
 ```
@@ -734,43 +698,39 @@ public class Payment {
 ```
 # Reservation.java
 
-package airbnb;
+package socar;
 
     @PostUpdate
     public void onPostUpdate(){
-    
-        ....
 
-        if(this.getStatus().equals("reserved")) {
+        // 예약 취소 요청일 경우 
+        if(this.getStatus().equals("reservationCancelRequested")) {
+            ReservationCancelRequested reservationCancelRequested = new ReservationCancelRequested();
+            BeanUtils.copyProperties(this, reservationCancelRequested);
+            reservationCancelRequested.publishAfterCommit();
+        }
 
-            ////////////////////
-            // 예약 확정된 경우
-            ////////////////////
-
-            // 이벤트 발생 --> ReservationConfirmed
+        // 예약 확정일 경우 
+        if(this.getStatus().equals("reservationConfirmed")) {
             ReservationConfirmed reservationConfirmed = new ReservationConfirmed();
             BeanUtils.copyProperties(this, reservationConfirmed);
             reservationConfirmed.publishAfterCommit();
         }
-        
-        ....
-        
+
+        // 예약 취소일 경우 
+        if(this.getStatus().equals("reservationCancelled")) {
+            ReservationCancelled reservationCancelled = new ReservationCancelled();
+            BeanUtils.copyProperties(this, reservationCancelled);
+            reservationCancelled.publishAfterCommit();
+        }
+
     }
 
 ```
 
-그 외 메시지 서비스는 예약/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 메시지 서비스가 유지보수로 인해 잠시 내려간 상태 라도 예약을 받는데 문제가 없다.
+그 외 메시지 서비스는 예약/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 메시지 서비스가 유지보수로 인해 잠시 내려간 상태 라도 예약을 받는데 문제가 없습니다
 
-```
-# 메시지 서비스 (message) 를 잠시 내려놓음 (ctrl+c)
-
-# 예약 요청
-http POST http://localhost:8088/reservations roomId=1 status=reqReserve   #Success
-
-# 예약 상태 확인
-http GET localhost:8088/reservations    #메시지 서비스와 상관없이 예약 상태는 정상 확인
-
-```
+	
 
 # 운영
 
