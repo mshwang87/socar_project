@@ -376,8 +376,9 @@ public interface CarService {
 
 1. gateway 스프링부트 App을 추가 후 application.yaml내에 각 마이크로 서비스의 routes 를 추가하고 gateway 서버의 포트를 8080 으로 설정하였습니다.
        
-          - application.yaml 예시
-            ```
+- application.yaml 예시
+	
+            
             spring:
 		  profiles: docker
 		  cloud:
@@ -420,69 +421,69 @@ public interface CarService {
 
 		server:
 		  port: 8080      
-            ```
-
-         
-      2. Kubernetes용 Deployment.yaml 을 작성하고 Kubernetes에 Deploy를 생성함
-          - Deployment.yaml 예시
-          
-
-            ```
-		apiVersion: apps/v1
-		kind: Deployment
-		metadata:
-		  name: gateway
-		  labels:
-		    app: gateway
-		spec:
-		  replicas: 1
-		  selector:
-		    matchLabels:
-		      app: gateway
-		  template:
-		    metadata:
-		      labels:
-			app: gateway
-		    spec:
-		      containers:
-			- name: gateway
-          		  image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION
-          
-			  ports:
-			    - containerPort: 8080
-            ```               
             
 
-            ```
-            Deploy 생성
-            kubectl apply -f deployment.yaml
-            ```     
+         
+2. Kubernetes용 Deployment.yaml 을 작성하고 Kubernetes에 Deploy를 생성함
+
+- Deployment.yaml 예시          
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  labels:
+    app: gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+	app: gateway
+    spec:
+      containers:
+	- name: gateway
+	  image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION
+
+	  ports:
+	    - containerPort: 8080
+```               
+            
+
+```
+Deploy 생성
+kubectl apply -f deployment.yaml
+```     
 	
-          - Kubernetes에 생성된 Deploy. 확인
+- Kubernetes에 생성된 Deploy. 확인
 	
 ![image](https://user-images.githubusercontent.com/12591322/162340420-02685eee-e1ac-47e8-84d2-d273532c31b3.png)
 
 	    
             
-      3. Kubernetes용 Service.yaml을 작성하고 Kubernetes에 Service/LoadBalancer을 생성하여 Gateway 엔드포인트를 확인함. 
-          - Service.yaml 예시
-          
-            ```
-            apiVersion: v1
-              kind: Service
-              metadata:
-                name: gateway
-                labels:
-                  app: gateway
-              spec:
-                ports:
-                  - port: 80
-                    targetPort: 8080
-                selector:
-                  app: gateway
-                type:
-                  LoadBalancer           
-            ```             
+3. Kubernetes용 Service.yaml을 작성하고 Kubernetes에 Service/LoadBalancer을 생성하여 Gateway 엔드포인트를 확인합니다.
+- Service.yaml 예시
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+name: gateway
+labels:
+  app: gateway
+spec:
+ports:
+  - port: 80
+    targetPort: 8080
+selector:
+  app: gateway
+type:
+  LoadBalancer           
+```             
 
            
             ```
