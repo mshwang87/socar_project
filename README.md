@@ -432,7 +432,8 @@ public interface CarService {
             ```     
           - Kubernetes에 생성된 Deploy. 확인
             
-![image](https://user-images.githubusercontent.com/12591322/162277091-565e39ab-fcb6-4abc-9789-f60580440f28.png)
+![image](https://user-images.githubusercontent.com/12591322/162340420-02685eee-e1ac-47e8-84d2-d273532c31b3.png)
+
 	    
             
       3. Kubernetes용 Service.yaml을 작성하고 Kubernetes에 Service/LoadBalancer을 생성하여 Gateway 엔드포인트를 확인함. 
