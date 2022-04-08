@@ -980,7 +980,7 @@ kubectl autoscale deployment user06-car -n default --cpu-percent=50 --min=1 --ma
 - Persistence Volume
 
 1: EFS 생성
-```
+
 ![image](https://user-images.githubusercontent.com/12591322/162372180-21b6b3f8-c244-421c-9453-b94b459c6c4d.png)
 
 2. EFS 계정 생성 및 ROLE 바인딩
@@ -992,14 +992,15 @@ kind: ServiceAccount
 metadata:
   name: efs-provisioner
   namespace: default
-
+```
 
 ![image](https://user-images.githubusercontent.com/12591322/162372450-4d6106c8-7f29-4445-87af-b9630ac4e073.png)
   
   
 kubectl apply -f efs-rbac.yaml
 ![image](https://user-images.githubusercontent.com/12591322/162372613-2486f130-8d0a-4855-8fb0-83d6ff15c713.png)
-
+	
+```
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -1058,11 +1059,10 @@ roleRef:
   kind: Role
   name: leader-locking-efs-provisioner
   apiGroup: rbac.authorization.k8s.io
-
-
 ```
 
 3. EFS Provisioner 배포
+	
 ```
 kubectl apply -f efs-provisioner-deploy.yml
 ![image](https://user-images.githubusercontent.com/12591322/162373159-fabb2bd0-0aad-4dda-a5d6-ff3a16770a28.png)
