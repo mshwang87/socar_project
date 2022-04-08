@@ -1065,8 +1065,10 @@ roleRef:
 	
 ```
 kubectl apply -f efs-provisioner-deploy.yml
+```
 ![image](https://user-images.githubusercontent.com/12591322/162373159-fabb2bd0-0aad-4dda-a5d6-ff3a16770a28.png)
 
+```
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1103,16 +1105,14 @@ spec:
           nfs:
             server: fs-012f140b6ba5a5709.efs.ap-southeast-2.amazonaws.com
             path: /
-
+```
 
 ![image](https://user-images.githubusercontent.com/12591322/162373203-27fe08fc-0951-48f8-ab17-2f20825d854a.png)
 
-```
 
 4. 설치한 Provisioner를 storageclass에 등록
 ```
 kubectl apply -f efs-storageclass.yml
-
 
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
@@ -1120,15 +1120,17 @@ metadata:
   name: user06-efs
   namespace: default
 provisioner: fs-012f140b6ba5a5709.efs.ap-southeast-2.amazonaws.com/user06-efs
+```
 
 ![image](https://user-images.githubusercontent.com/12591322/162374383-58e9ec19-c0c5-47a4-b406-52515fdc936d.png)
 
 5. PVC(PersistentVolumeClaim) 생성
 ```
 kubectl apply -f volume-pvc.yml
+```
 ![image](https://user-images.githubusercontent.com/12591322/162374429-e1e9db33-5378-4e4a-a5de-63fda0b051da.png)
 
-
+```
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -1143,6 +1145,6 @@ spec:
     requests:
       storage: 6Ki
   storageClassName: user06-efs
-  
-![image](https://user-images.githubusercontent.com/12591322/162374508-b9fdb7d1-58fe-403c-a883-6e8a8a910152.png)
 ```
+![image](https://user-images.githubusercontent.com/12591322/162374508-b9fdb7d1-58fe-403c-a883-6e8a8a910152.png)
+
