@@ -496,8 +496,8 @@ public interface CarService {
             Service  및 엔드포인트 확인 
             kubectl get svc -n airbnb           
             ```                 
-![image](https://user-images.githubusercontent.com/12591322/162277731-27dbe1a3-7202-4340-be94-bcaa75551aeb.png)
-
+![image](https://user-images.githubusercontent.com/12591322/162365314-6f70b2c9-5883-40df-abcb-70a16bf5b0e6.png)
+	
 	
 # Correlation
 
