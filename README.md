@@ -379,10 +379,6 @@ public interface CarService {
             ```
             spring:
 		  profiles: docker
-		  sleuth:
-		    propagation-keys: x-request-id,x-ot-span-context
-		  zipkin:
-		    base-url: http://jaeger-collector.default.svc.cluster.local:9411
 		  cloud:
 		    gateway:
 		      routes:
@@ -449,7 +445,6 @@ public interface CarService {
 		    spec:
 		      containers:
 			- name: gateway
-			  #image: 979050235289.dkr.ecr.ap-southeast-2.amazonaws.com/user06-gateway:1.0
           		  image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION
           
 			  ports:
@@ -480,7 +475,7 @@ public interface CarService {
                   app: gateway
               spec:
                 ports:
-                  - port: 8080
+                  - port: 80
                     targetPort: 8080
                 selector:
                   app: gateway
