@@ -456,8 +456,9 @@ public interface CarService {
             Deploy 생성
             kubectl apply -f deployment.yaml
             ```     
+	
           - Kubernetes에 생성된 Deploy. 확인
-            
+	
 ![image](https://user-images.githubusercontent.com/12591322/162340420-02685eee-e1ac-47e8-84d2-d273532c31b3.png)
 
 	    
@@ -470,7 +471,6 @@ public interface CarService {
               kind: Service
               metadata:
                 name: gateway
-                namespace: airbnb
                 labels:
                   app: gateway
               spec:
