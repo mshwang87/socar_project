@@ -403,7 +403,7 @@ public interface CarService {
 			- id: viewpage
 			  uri: http://user06-viewpage:8080
 			  predicates:
-			    - Path= /roomviews/**
+			    - Path= /carviews/**
 			- id: frontend
 			  uri: http://user06-frontend:8080
 			  predicates:
@@ -469,35 +469,35 @@ kubectl apply -f deployment.yaml
 - Service.yaml 예시
 
 ```
-apiVersion: v1
-kind: Service
-metadata:
-name: gateway
-labels:
-  app: gateway
-spec:
-ports:
-  - port: 80
-    targetPort: 8080
-selector:
-  app: gateway
-type:
-  LoadBalancer           
+	apiVersion: v1
+	kind: Service
+	metadata:
+	name: gateway
+	labels:
+	  app: gateway
+	spec:
+	ports:
+	  - port: 80
+	    targetPort: 8080
+	selector:
+	  app: gateway
+	type:
+	  LoadBalancer           
 ```             
 
            
-            ```
-            Service 생성
-            kubectl apply -f service.yaml            
-            ```             
-            
-            
-          - API Gateay 엔드포인트 확인
-           
-            ```
-            Service  및 엔드포인트 확인 
-            kubectl get svc -n airbnb           
-            ```                 
+```
+	Service 생성
+	kubectl apply -f service.yaml            
+```             
+
+
+- API Gateay 엔드포인트 확인
+
+```
+	Service  및 엔드포인트 확인 
+	kubectl get svc -n default           
+```                 
 ![image](https://user-images.githubusercontent.com/12591322/162365314-6f70b2c9-5883-40df-abcb-70a16bf5b0e6.png)
 	
 	
