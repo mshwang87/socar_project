@@ -143,11 +143,8 @@ public class Car  {
 
 + 서비스 호출 흐름(Sync)<p>
 * `예약(Reservation)` -> `결제(Payment)`간 호출은 동기식으로 일관성을 유지하는 트랜젝션으로 처리
-* Customer는 차량을 확인하고 예약 및 결제 수행
+* Customer는 차량 예약여부를 확인하고 예약 및 결제 수행
 * 결제서비스를 호출하기위해 FeinClient를 이용하여 인터페이스(Proxy)를 구현 
-* 예약이 가능하면(`@PostPersist`) 결제를 요청하도록 처리한다.
-	
-	
 	
 ```
 // Reservation/src/main/java/socar/external/PaymentService.java
@@ -156,20 +153,46 @@ public class Car  {
 public interface PaymentService {
     @RequestMapping(method= RequestMethod.POST, path="/payments")
     public void approvePayment(@RequestBody Payment payment);
-
 }
 
 
 // Reservation/src/main/java/socar/external/CarService.java
 @FeignClient(name="car", url="http://user06-car:8080")
 public interface CarService {
-    @RequestMapping(method= RequestMethod.GET, path="/cars")
-    public void chkAndReqReserve(@RequestBody Car car);
-
+    @RequestMapping(method= RequestMethod.GET, path="/chkAndReqReserve")
+    public boolean chkAndReqReserve(@RequestParam("carId") long carId);
 }
 ```	
-	
-	
+	 
+* 예약 요청 후(`@PostPersist`) 결제를 요청하도록 처리한다.
+
+```
+    @PostPersist
+    public void onPostPersist(){
+
+        // 예약 요청이 들어왔을 경우 사용가능한지 확인
+        // mappings goes here
+        boolean result = ReservationApplication.applicationContext.getBean(socar.external.CarService.class)
+            .chkAndReqReserve(this.getCarId());
+        System.out.println("사용가능 여부 : " + result);
+
+        if(result) { 
+            // 예약 가능한 상태인 경우(Available)
+            // PAYMENT 결제모듈 호출 (POST방식) - SYNC 호출
+            socar.external.Payment payment = new socar.external.Payment();
+            payment.setRsvId(this.getRsvId());
+            payment.setCarId(this.getCarId());
+            payment.setStatus("paid");
+            ReservationApplication.applicationContext.getBean(socar.external.PaymentService.class)
+                .approvePayment(payment);
+
+            // 이벤트시작 --> ReservationCreated
+            ReservationCreated reservationCreated = new ReservationCreated();
+            BeanUtils.copyProperties(this, reservationCreated);
+            reservationCreated.publishAfterCommit();
+        }
+    }
+```
 	
 	
 	
@@ -339,7 +362,15 @@ public interface CarService {
 	    }
 	}
 
-```	
+```
+* 차량 등록 관련 
+![image](https://user-images.githubusercontent.com/12591322/162362233-c550dc74-3a2f-4fd2-8fab-8cea1e4bb308.png)
+
+* view 페이지 조회
+ (오류가 있어 상세 정보는 등록되지 못하고 객체정도가 추가되었음을 확인할 수 있습니다.)
+![image](https://user-images.githubusercontent.com/12591322/162362451-b99b0885-f46e-43fd-823a-8f1491a2ec41.png)
+
+
 
 ## API 게이트웨이
       1. gateway 스프링부트 App을 추가 후 application.yaml내에 각 마이크로 서비스의 routes 를 추가하고 gateway 서버의 포트를 8080 으로 설
